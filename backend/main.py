@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -16,9 +16,9 @@ def home():
     return {"message": "Welcome to TrustBridge AI Backend 🚀"}
 
 @app.get("/search")
-def search():
+def search(company: str = Query(...)):
     return {
-        "company": "ABC Overseas Dubai",
+        "company": company,
         "trust_score": 89,
         "risk": "Low",
         "recommendation": "Looks genuine. Verify the contract before payment."

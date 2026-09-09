@@ -1,17 +1,39 @@
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 
 function App() {
   const [companyData, setCompanyData] = useState(null);
+  const [companyName, setCompanyName] = useState("");
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/search")
-      .then((response) => response.json())
-      .then((data) => setCompanyData(data));
-  }, []);
+  const searchCompany = () => {
+  fetch(`http://127.0.0.1:8000/search?company=${companyName}`)
+    .then((response) => response.json())
+    .then((data) => setCompanyData(data));
+};
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>🚀 TrustBridge AI</h1>
+      <input
+  type="text"
+  placeholder="Enter company name"
+  value={companyName}
+  onChange={(e) => setCompanyName(e.target.value)}
+  style={{
+    padding: "10px",
+    width: "300px",
+    marginRight: "10px",
+  }}
+/>
+
+
+<button
+  onClick={searchCompany}
+  style={{ padding: "10px 20px" }}
+>
+  Analyze
+</button>
+<br />
+<br />
 
       {companyData ? (
         <>
