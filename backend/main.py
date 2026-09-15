@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import traceback
@@ -6,10 +7,25 @@ import traceback
 from services.news_service import get_company_news
 from services.gemini_service import analyze_company
 from services.gleif_service import get_company_legal_info
+from database import init_db
+from services.review_service import (
+    add_review,
+    get_reviews,
+    get_review_summary
+)
 
 load_dotenv()
 
 app = FastAPI()
+
+init_db()
+
+class ReviewCreate(BaseModel):
+    organization: str = Field(min_length=2, max_length=200)
+    experience_type: str = Field(min_length=2, max_length=50)
+    rating: int = Field(ge=1, le=5)
+    review_text: str = Field(min_length=10, max_length=2000)
+    display_name: str | None = Field(default=None, max_length=80)
 
 # --------------------------------------------------
 # CORS
@@ -130,3 +146,33 @@ def search(company: str = Query(...)):
         "legal_info": legal_info,
         "news": headlines
     }
+
+
+@app.post("/reviews")
+def create_review(review: ReviewCreate):
+
+    result = add_review(
+        organization=review.organization,
+        experience_type=review.experience_type,
+        rating=review.rating,
+        review_text=review.review_text,
+        display_name=review.display_name
+    )
+
+    return result
+
+
+@app.get("/reviews")
+def fetch_reviews(
+    organization: str = Query(..., min_length=1)
+):
+
+    reviews = get_reviews(organization)
+    summary = get_review_summary(organization)
+
+    return {
+        "organization": organization,
+        "review_count": summary["review_count"],
+        "average_rating": summary["average_rating"],
+        "reviews": reviews
+    }  
