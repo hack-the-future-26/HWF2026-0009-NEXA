@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import CommunityReviews from "./CommunityReviews";
 import "./app.css";
 
 function App() {
@@ -7,98 +8,7 @@ function App() {
   const [category, setCategory] = useState("Employment");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const [reviews, setReviews] = useState([]);
-  const [reviewCount, setReviewCount] = useState(0);
-  const [averageRating, setAverageRating] = useState(null);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewMessage, setReviewMessage] = useState("");
-  const [reviewForm, setReviewForm] = useState({
-    experience_type: "Employment",
-    rating: 5,
-    review_text: "",
-    display_name: "",
-  });
-
-  const fetchReviews = async (organization) => {
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/reviews?organization=${encodeURIComponent(
-          organization.trim()
-        )}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Unable to load community reviews.");
-      }
-
-      const data = await response.json();
-
-      setReviews(data.reviews || []);
-      setReviewCount(data.review_count || 0);
-      setAverageRating(data.average_rating ?? null);
-    } catch (err) {
-      console.error("Review fetch error:", err);
-      setReviews([]);
-      setReviewCount(0);
-      setAverageRating(null);
-    }
-  };
-
-  const submitReview = async (event) => {
-    event.preventDefault();
-
-    if (!companyData?.company) return;
-
-    setReviewSubmitting(true);
-    setReviewMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/reviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          organization: companyData.company,
-          experience_type: reviewForm.experience_type,
-          rating: Number(reviewForm.rating),
-          review_text: reviewForm.review_text,
-          display_name: reviewForm.display_name || null,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail?.[0]?.msg || "Unable to submit review."
-        );
-      }
-
-      setReviewMessage("Review submitted successfully!");
-
-      setReviewForm({
-        experience_type: "Employment",
-        rating: 5,
-        review_text: "",
-        display_name: "",
-      });
-
-      await fetchReviews(companyData.company);
-
-      setTimeout(() => {
-        setShowReviewForm(false);
-        setReviewMessage("");
-      }, 1200);
-    } catch (err) {
-      console.error("Review submission error:", err);
-      setReviewMessage(err.message || "Unable to submit review.");
-    } finally {
-      setReviewSubmitting(false);
-    }
-  };
+  const [currentPage, setCurrentPage] = useState("dashboard");
 
   const searchCompany = async () => {
     if (!companyName.trim()) return;
@@ -106,17 +16,12 @@ function App() {
     setLoading(true);
     setError("");
     setCompanyData(null);
-    setReviews([]);
-    setReviewCount(0);
-    setAverageRating(null);
-    setShowReviewForm(false);
-    setReviewMessage("");
 
     try {
       const response = await fetch(
         `http://127.0.0.1:8000/search?company=${encodeURIComponent(
           companyName.trim()
-        )}`
+        )}&category=${encodeURIComponent(category)}`
       );
 
       if (!response.ok) {
@@ -125,7 +30,6 @@ function App() {
 
       const data = await response.json();
       setCompanyData(data);
-      await fetchReviews(data.company);
     } catch (err) {
       console.error(err);
       setError(
@@ -186,146 +90,7 @@ function App() {
   };
 
   return (
-    <>
-      <style>{`
-        .review-modal-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 1000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          background: rgba(15, 23, 42, 0.55);
-          backdrop-filter: blur(5px);
-        }
-        .review-modal {
-          width: min(560px, 100%);
-          max-height: 90vh;
-          overflow-y: auto;
-          background: #fff;
-          border-radius: 22px;
-          padding: 28px;
-          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
-        }
-        .review-modal-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 20px;
-          margin-bottom: 8px;
-        }
-        .review-modal-header span {
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: .12em;
-          color: #2563eb;
-        }
-        .review-modal-header h2 {
-          margin: 6px 0 0;
-          font-size: 26px;
-          color: #0f172a;
-        }
-        .review-close {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          background: #f1f5f9;
-          color: #475569;
-          font-size: 24px;
-          cursor: pointer;
-        }
-        .review-organization {
-          margin: 0 0 22px;
-          color: #64748b;
-          line-height: 1.6;
-        }
-        .review-field {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 16px;
-        }
-        .review-field > span {
-          font-size: 13px;
-          font-weight: 700;
-          color: #334155;
-        }
-        .review-field input,
-        .review-field select,
-        .review-field textarea {
-          width: 100%;
-          border: 1px solid #dbe3ee;
-          border-radius: 12px;
-          padding: 12px 14px;
-          background: #f8fafc;
-          color: #0f172a;
-          font: inherit;
-          outline: none;
-        }
-        .review-field input:focus,
-        .review-field select:focus,
-        .review-field textarea:focus {
-          border-color: #60a5fa;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
-          background: #fff;
-        }
-        .review-field textarea {
-          resize: vertical;
-          min-height: 120px;
-        }
-        .review-message {
-          padding: 11px 13px;
-          border-radius: 10px;
-          margin-bottom: 14px;
-          font-size: 13px;
-          font-weight: 600;
-        }
-        .review-message.success {
-          background: #dcfce7;
-          color: #166534;
-        }
-        .review-message.error {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        .review-submit {
-          width: 100%;
-          padding: 13px 18px;
-          border-radius: 12px;
-          background: #2563eb;
-          color: #fff;
-          font-weight: 700;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        .review-submit:hover {
-          background: #1d4ed8;
-        }
-        .review-submit:disabled {
-          opacity: .65;
-          cursor: not-allowed;
-        }
-        .review-disclaimer {
-          margin: 16px 0 0;
-          color: #94a3b8;
-          font-size: 11px;
-          line-height: 1.6;
-        }
-        .community-review-panel {
-          margin-top: 24px;
-        }
-        @media (max-width: 600px) {
-          .review-modal-overlay { padding: 12px; }
-          .review-modal {
-            padding: 20px;
-            border-radius: 18px;
-          }
-          .review-modal-header h2 { font-size: 22px; }
-        }
-      `}</style>
-
-      <div className="app">
+    <div className="app">
       {/* NAVBAR */}
       <header className="navbar">
         <div className="brand">
@@ -338,13 +103,29 @@ function App() {
         </div>
 
         <nav className="nav-links">
-          <button className="nav-link active">Dashboard</button>
-          <button className="nav-link">Community Reviews</button>
+          <button
+            className={`nav-link ${currentPage === "dashboard" ? "active" : ""}`}
+            onClick={() => setCurrentPage("dashboard")}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`nav-link ${currentPage === "community" ? "active" : ""}`}
+            onClick={() => setCurrentPage("community")}
+          >
+            Community Reviews
+          </button>
         </nav>
       </header>
 
       <main>
-        {/* HERO */}
+        {currentPage === "community" ? (
+          <CommunityReviews
+            initialOrganization={companyData?.company || ""}
+          />
+        ) : (
+          <>
+            {/* HERO */}
         <section className="hero">
           <div className="hero-badge">
             <span>✦</span>
@@ -619,27 +400,21 @@ function App() {
                 <div className="evidence-top">
                   <div className="evidence-icon community">★</div>
 
-                  <span className="source-status">
-                    {reviewCount > 0 ? "AVAILABLE" : "NO REVIEWS"}
+                  <span className="source-status pending">
+                    COMING NEXT
                   </span>
                 </div>
 
                 <h3>Community Experiences</h3>
 
                 <p>
-                  Real experiences from people who worked or studied there
-                  help others make safer decisions.
+                  Experiences from people who worked or studied there will
+                  help strengthen future assessments.
                 </p>
 
                 <div className="evidence-footer">
-                  <span>
-                    {reviewCount > 0
-                      ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}`
-                      : "Community database"}
-                  </span>
-                  <strong>
-                    {averageRating !== null ? `★ ${averageRating}/5` : "No data"}
-                  </strong>
+                  <span>Community database</span>
+                  <strong>Building</strong>
                 </div>
               </div>
             </div>
@@ -769,64 +544,6 @@ function App() {
               </div>
             </div>
 
-            {/* COMMUNITY REVIEWS */}
-            <div className="detail-card community-review-panel">
-              <div className="detail-header">
-                <div className="detail-title">
-                  <div className="detail-icon">★</div>
-                  <div>
-                    <span>COMMUNITY</span>
-                    <h3>Community Reviews</h3>
-                  </div>
-                </div>
-
-                <span className="news-count">
-                  {reviewCount} review{reviewCount === 1 ? "" : "s"}
-                </span>
-              </div>
-
-              {reviewCount > 0 ? (
-                <div className="news-list">
-                  {reviews.slice(0, 3).map((review) => (
-                    <div className="news-item" key={review.id}>
-                      <div className="news-number">★</div>
-                      <div>
-                        <p>
-                          {"★".repeat(review.rating)}
-                          {"☆".repeat(5 - review.rating)}
-                        </p>
-                        <p>{review.review_text}</p>
-                        <span>
-                          {review.display_name || "Community member"} ·{" "}
-                          {review.experience_type}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-news">
-                  <span>💬</span>
-                  <p>
-                    No community reviews yet. Be the first person to share
-                    your experience.
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="review-button"
-                onClick={() => {
-                  setShowReviewForm(true);
-                  setReviewMessage("");
-                }}
-                style={{ marginTop: "18px", width: "100%" }}
-              >
-                Share Your Experience →
-              </button>
-            </div>
-
             {/* COMMUNITY CTA */}
             <div className="community-cta">
               <div className="community-cta-icon">★</div>
@@ -847,11 +564,7 @@ function App() {
 
               <button
                 className="review-button"
-                type="button"
-                onClick={() => {
-                  setShowReviewForm(true);
-                  setReviewMessage("");
-                }}
+                onClick={() => setCurrentPage("community")}
               >
                 Share Experience →
               </button>
@@ -872,147 +585,9 @@ function App() {
             </p>
           </section>
         )}
+          </>
+        )}
       </main>
-
-      {/* COMMUNITY REVIEW MODAL */}
-      {showReviewForm && companyData && (
-        <div
-          className="review-modal-overlay"
-          onClick={() => {
-            if (!reviewSubmitting) {
-              setShowReviewForm(false);
-              setReviewMessage("");
-            }
-          }}
-        >
-          <div
-            className="review-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="review-modal-header">
-              <div>
-                <span>COMMUNITY EXPERIENCE</span>
-                <h2>Share your experience</h2>
-              </div>
-
-              <button
-                type="button"
-                className="review-close"
-                onClick={() => {
-                  setShowReviewForm(false);
-                  setReviewMessage("");
-                }}
-                disabled={reviewSubmitting}
-              >
-                ×
-              </button>
-            </div>
-
-            <p className="review-organization">
-              Sharing your experience about <strong>{companyData.company}</strong>
-            </p>
-
-            <form onSubmit={submitReview}>
-              <label className="review-field">
-                <span>Experience type</span>
-                <select
-                  value={reviewForm.experience_type}
-                  onChange={(event) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      experience_type: event.target.value,
-                    })
-                  }
-                  required
-                >
-                  <option>Employment</option>
-                  <option>Education</option>
-                  <option>Recruitment</option>
-                  <option>Other</option>
-                </select>
-              </label>
-
-              <label className="review-field">
-                <span>Rating</span>
-                <select
-                  value={reviewForm.rating}
-                  onChange={(event) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      rating: Number(event.target.value),
-                    })
-                  }
-                  required
-                >
-                  <option value={5}>★★★★★ — Excellent</option>
-                  <option value={4}>★★★★☆ — Good</option>
-                  <option value={3}>★★★☆☆ — Average</option>
-                  <option value={2}>★★☆☆☆ — Poor</option>
-                  <option value={1}>★☆☆☆☆ — Very poor</option>
-                </select>
-              </label>
-
-              <label className="review-field">
-                <span>Your experience</span>
-                <textarea
-                  value={reviewForm.review_text}
-                  onChange={(event) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      review_text: event.target.value,
-                    })
-                  }
-                  placeholder="Tell others about your experience..."
-                  minLength={10}
-                  maxLength={2000}
-                  rows={5}
-                  required
-                />
-              </label>
-
-              <label className="review-field">
-                <span>Name (optional)</span>
-                <input
-                  value={reviewForm.display_name}
-                  onChange={(event) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      display_name: event.target.value,
-                    })
-                  }
-                  placeholder="Your name"
-                  maxLength={80}
-                />
-              </label>
-
-              {reviewMessage && (
-                <div
-                  className={`review-message ${
-                    reviewMessage.toLowerCase().includes("success")
-                      ? "success"
-                      : "error"
-                  }`}
-                >
-                  {reviewMessage}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="review-submit"
-                disabled={reviewSubmitting}
-              >
-                {reviewSubmitting ? "Submitting..." : "Submit Review →"}
-              </button>
-            </form>
-
-            <p className="review-disclaimer">
-              Please share genuine experiences only. Do not include passwords,
-              phone numbers, financial details, or other sensitive information.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* FOOTER */}
       <footer>
@@ -1027,7 +602,6 @@ function App() {
         <span>Built for safer decisions • Hack the Future 26</span>
       </footer>
     </div>
-    </>
   );
 }
 

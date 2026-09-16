@@ -56,10 +56,12 @@ def home():
 # Search Company
 # --------------------------------------------------
 @app.get("/search")
-def search(company: str = Query(...)):
-
+def search(
+    company: str = Query(...),
+    category: str = Query("Employment")
+):
     print(f"\nSearching: {company}")
-
+    print(f"Category: {category}")
     # -------------------------
     # STEP 1 - News
     # -------------------------
@@ -106,7 +108,8 @@ def search(company: str = Query(...)):
         result = analyze_company(
             company,
             news_text,
-            legal_info
+            legal_info,
+            category
         )
 
         trust_score = result["trust_score"]
@@ -134,9 +137,26 @@ def search(company: str = Query(...)):
             recommendation = (
                 "AI analysis is currently unavailable."
             )
+    # -------------------------
+    # STEP 4 - Community Reviews
+    # -------------------------
+    try:
+        review_summary = get_review_summary(company)
+    except Exception as e:
+        print("\n========== REVIEW ERROR ==========")
+        traceback.print_exc()
+
+        review_summary = {
+            "review_count": 0,
+            "average_rating": None  
+        }   
+
+    print("\n========== COMMUNITY REVIEWS ==========")
+    print(review_summary)
+
 
     # -------------------------
-    # STEP 4 - Response
+    # STEP 5 - Response
     # -------------------------
     return {
         "company": company,
@@ -144,10 +164,13 @@ def search(company: str = Query(...)):
         "risk": risk,
         "recommendation": recommendation,
         "legal_info": legal_info,
-        "news": headlines
+        "news": headlines,
+        "community": {
+            "review_count": review_summary["review_count"],
+            "average_rating": review_summary["average_rating"]
+        }
     }
-
-
+    
 @app.post("/reviews")
 def create_review(review: ReviewCreate):
 
