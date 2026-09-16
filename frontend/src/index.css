@@ -1,3 +1,15 @@
+/* =========================================================
+   TRUSTBRIDGE AI — GLOBAL STYLES
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  background: #f8fafc;
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -52,6 +64,47 @@
 
 body {
   margin: 0;
+  padding: 0;
+
+  min-width: 320px;
+  min-height: 100vh;
+
+  background: #f8fafc;
+  color: #0f172a;
+
+  font-family:
+    "Segoe UI",
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  border: none;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Prevent browser dark-mode preferences
+   from changing TrustBridge colors */
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+  }
+}
 }
 
 #root {

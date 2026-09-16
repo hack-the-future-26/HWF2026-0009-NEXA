@@ -7,6 +7,7 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
+def analyze_company(company, news_text, legal_info, category="Employment"):
 def analyze_company(company, news_text, legal_info):
 
     if legal_info is None:
@@ -18,6 +19,40 @@ def analyze_company(company, news_text, legal_info):
             "legal_address": "Unknown",
         }
 
+    if category == "Education":
+        verification_focus = """
+Focus on education-related signals such as:
+- Whether the organization appears to be an educational institution
+- Available institutional/legal information
+- Education-related news or reputation signals
+- Any obvious warning signs relevant to students
+"""
+
+    elif category == "Overseas Opportunity":
+        verification_focus = """
+Focus on overseas opportunity-related signals such as:
+- Recruitment or employment-related information
+- Overseas job or opportunity claims
+- Payment or recruitment warning signals
+- News related to scams, disputes, complaints, or misleading opportunities
+"""
+
+    else:
+        verification_focus = """
+Focus on employment and organization-related signals such as:
+- Organization/legal information
+- Employment-related reputation
+- News related to disputes, complaints, scams, or misleading claims
+"""
+
+    prompt = f"""
+Analyze the organization '{company}' for the following purpose:
+
+Category: {category}
+
+Verification Focus
+------------------
+{verification_focus}
     prompt = f"""
 Analyze the company '{company}'.
 
@@ -33,6 +68,16 @@ Recent News
 -----------
 {news_text}
 
+Based on the available legal information and recent news, provide a
+risk assessment relevant to the selected category.
+
+Important:
+- Do not claim that an organization is definitely legitimate or fraudulent.
+- Treat missing information as unavailable evidence, not proof of fraud.
+- Base the assessment only on the available evidence.
+- Keep the recommendation practical and concise.
+
+Respond ONLY in this format:
 Based on BOTH the legal verification and the recent news, respond ONLY in this format:
 
 Trust Score: <number out of 100>
