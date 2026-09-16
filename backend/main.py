@@ -1,12 +1,17 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, UploadFile, File, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import traceback
 
+
 from services.news_service import get_company_news
 from services.gemini_service import analyze_company
 from services.gleif_service import get_company_legal_info
+from services.trust_score_service import calculate_trust_score
+from services.document_scanner_service import analyze_document
+from services.pdf_report_service import generate_verification_report
 from database import init_db
 from services.review_service import (
     add_review,
@@ -112,7 +117,7 @@ def search(
             category
         )
 
-        trust_score = result["trust_score"]
+        
         risk = result["risk"]
         recommendation = result["recommendation"]
 
@@ -154,9 +159,23 @@ def search(
     print("\n========== COMMUNITY REVIEWS ==========")
     print(review_summary)
 
+    # -------------------------
+    # STEP 5 - Trust Score
+    # -------------------------
+    score_breakdown = calculate_trust_score(
+        legal_info=legal_info,
+        news=headlines,
+        review_summary=review_summary
+    )
+
+    trust_score = score_breakdown["total"]
+
+    print("\n========== TRUST SCORE ==========")
+    print(score_breakdown)
+
 
     # -------------------------
-    # STEP 5 - Response
+    # STEP 6 - Response
     # -------------------------
     return {
         "company": company,
@@ -168,7 +187,9 @@ def search(
         "community": {
             "review_count": review_summary["review_count"],
             "average_rating": review_summary["average_rating"]
-        }
+        },
+        "score_breakdown": score_breakdown
+
     }
     
 @app.post("/reviews")
@@ -198,4 +219,88 @@ def fetch_reviews(
         "review_count": summary["review_count"],
         "average_rating": summary["average_rating"],
         "reviews": reviews
-    }  
+    }
+
+
+# --------------------------------------------------
+# Document Scanner
+# --------------------------------------------------
+
+@app.post("/scan-document")
+async def scan_document(
+    file: UploadFile = File(...)
+):
+    try:
+        allowed_types = {
+            "application/pdf",
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+        }
+
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Please upload a PDF or image."
+            )
+
+        file_bytes = await file.read()
+
+        if not file_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file is empty."
+            )
+
+        result = analyze_document(
+            file.filename,
+            file_bytes
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+    except Exception:
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to analyze this document right now."
+        )
+    
+
+# --------------------------------------------------
+# PDF Verification Report
+# --------------------------------------------------
+
+@app.post("/generate-report")
+def generate_report(data: dict):
+    try:
+        pdf_bytes = generate_verification_report(data)
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    'attachment; filename="TrustBridge_Verification_Report.pdf"'
+                )
+            },
+        )
+
+    except Exception:
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to generate the verification report."
+        )
+

@@ -46,6 +46,50 @@ function App() {
     }
   };
 
+  const downloadReport = async () => {
+  if (!companyData) return;
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/generate-report",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...companyData,
+          category,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to generate the verification report.");
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "TrustBridge_Verification_Report.pdf";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+
+    setError(
+      "We couldn't generate the verification report right now."
+    );
+  }
+};
+
   const getRiskColor = (risk) => {
     if (!risk) return "#64748b";
 
@@ -249,10 +293,29 @@ function App() {
                 </p>
               </div>
 
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                }}
+              >
               <div className="analyzed-badge">
                 <span>●</span> Analysis complete
               </div>
+
+              <button
+                className="review-button"
+                onClick={downloadReport}
+              >
+                Download PDF
+             </button>
+             </div>
             </div>
+          
+
 
             {/* SCORE CARDS */}
             <div className="summary-grid">
