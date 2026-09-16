@@ -8,6 +8,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def analyze_company(company, news_text, legal_info, category="Employment"):
+def analyze_company(company, news_text, legal_info):
 
     if legal_info is None:
         legal_info = {
@@ -52,6 +53,8 @@ Category: {category}
 Verification Focus
 ------------------
 {verification_focus}
+    prompt = f"""
+Analyze the company '{company}'.
 
 Legal Information
 -----------------
@@ -75,6 +78,7 @@ Important:
 - Keep the recommendation practical and concise.
 
 Respond ONLY in this format:
+Based on BOTH the legal verification and the recent news, respond ONLY in this format:
 
 Trust Score: <number out of 100>
 Risk: <Low/Medium/High>
