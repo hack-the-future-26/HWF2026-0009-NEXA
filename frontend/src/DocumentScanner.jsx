@@ -138,7 +138,7 @@ function DocumentScanner() {
               marginBottom: 0,
             }}
           >
-            Supported: PDF, PNG, JPG, JPEG and WEBP
+            Supported: Text-based PDF and DOCX. Image and scanned documents may not be fully supported.
           </p>
 
           {file && (
@@ -161,6 +161,21 @@ function DocumentScanner() {
             {error}
           </div>
         )}
+        
+        <div className="scanner-disclaimer">
+          <strong>Important:</strong> This scanner is currently a prototype and
+          may not work correctly with every document format. Text-based PDF and
+          DOCX files are supported best. Scanned PDFs and images may require OCR
+          support in a future version.
+        </div>
+
+        <button
+          className="scanner-button"
+          onClick={scanDocument}
+          disabled={!file || loading}
+        >
+          {loading ? "Analyzing..." : "Scan Document →"}
+        </button>
 
         <button
           className="review-button"

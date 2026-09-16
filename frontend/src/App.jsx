@@ -1,5 +1,6 @@
 import { useState } from "react";
 import CommunityReviews from "./CommunityReviews";
+import DocumentScanner from "./DocumentScanner";
 import "./app.css";
 
 function App() {
@@ -159,6 +160,13 @@ function App() {
           >
             Community Reviews
           </button>
+          <button
+            className={`nav-link ${currentPage === "scanner" ? "active" : ""}`}
+            onClick={() => setCurrentPage("scanner")}
+          >
+            Document Scanner
+          </button>
+          
         </nav>
       </header>
 
@@ -167,6 +175,8 @@ function App() {
           <CommunityReviews
             initialOrganization={companyData?.company || ""}
           />
+        ) : currentPage === "scanner" ? (
+          <DocumentScanner />
         ) : (
           <>
             {/* HERO */}
@@ -223,22 +233,31 @@ function App() {
 
             <div className="category-buttons">
               {["Employment", "Education", "Overseas Opportunity"].map(
-                (item) => (
-                  <button
-                    key={item}
-                    className={`category-button ${
-                      category === item ? "selected" : ""
-                    }`}
-                    onClick={() => setCategory(item)}
-                  >
-                    {item === "Employment" && "💼"}
-                    {item === "Education" && "🎓"}
-                    {item === "Overseas Opportunity" && "🌍"}
-                    {item}
-                  </button>
-                )
-              )}
-            </div>
+                  (item) => (
+                    <button
+                      key={item}
+                      className={`category-button ${
+                        category === item ? "selected" : ""
+                      } ${item === "Education" ? "coming-next" : ""}`}
+                      onClick={() => {
+                        if (item !== "Education") {
+                          setCategory(item);
+                        }
+                      }}
+                      disabled={item === "Education"}
+                    >
+                      {item === "Employment" && "💼"}
+                      {item === "Education" && "🎓"}
+                      {item === "Overseas Opportunity" && "🌍"}
+                      {item}
+
+                      {item === "Education" && (
+                        <span className="coming-soon-tag">COMING NEXT</span>
+                      )}
+                    </button>
+                  )
+                )}
+              </div>
           </div>
         </section>
 
@@ -458,30 +477,8 @@ function App() {
                   <strong>{companyData.news?.length || 0}</strong>
                 </div>
               </div>
-
-              <div className="evidence-card community-card">
-                <div className="evidence-top">
-                  <div className="evidence-icon community">★</div>
-
-                  <span className="source-status pending">
-                    COMING NEXT
-                  </span>
-                </div>
-
-                <h3>Community Experiences</h3>
-
-                <p>
-                  Experiences from people who worked or studied there will
-                  help strengthen future assessments.
-                </p>
-
-                <div className="evidence-footer">
-                  <span>Community database</span>
-                  <strong>Building</strong>
-                </div>
-              </div>
-            </div>
-
+            </div>  
+              
             {/* AI ASSESSMENT */}
             <div className="ai-card">
               <div className="ai-header">
@@ -662,7 +659,7 @@ function App() {
           AI-powered organization trust & risk assessment platform
         </p>
 
-        <span>Built for safer decisions • Hack the Future 26</span>
+        <span>Built for safer decisions • TrustBridge AI </span>
       </footer>
     </div>
   );
