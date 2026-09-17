@@ -1,14 +1,21 @@
 import os
+
 from dotenv import load_dotenv
 from google import genai
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 
-def analyze_company(company, news_text, legal_info, category="Employment"):
-def analyze_company(company, news_text, legal_info):
+def analyze_company(
+    company,
+    news_text,
+    legal_info,
+    category="Employment"
+):
 
     if legal_info is None:
         legal_info = {
@@ -20,8 +27,10 @@ def analyze_company(company, news_text, legal_info):
         }
 
     if category == "Education":
+
         verification_focus = """
 Focus on education-related signals such as:
+
 - Whether the organization appears to be an educational institution
 - Available institutional/legal information
 - Education-related news or reputation signals
@@ -29,8 +38,10 @@ Focus on education-related signals such as:
 """
 
     elif category == "Overseas Opportunity":
+
         verification_focus = """
 Focus on overseas opportunity-related signals such as:
+
 - Recruitment or employment-related information
 - Overseas job or opportunity claims
 - Payment or recruitment warning signals
@@ -38,8 +49,10 @@ Focus on overseas opportunity-related signals such as:
 """
 
     else:
+
         verification_focus = """
 Focus on employment and organization-related signals such as:
+
 - Organization/legal information
 - Employment-related reputation
 - News related to disputes, complaints, scams, or misleading claims
@@ -53,8 +66,6 @@ Category: {category}
 Verification Focus
 ------------------
 {verification_focus}
-    prompt = f"""
-Analyze the company '{company}'.
 
 Legal Information
 -----------------
@@ -72,13 +83,13 @@ Based on the available legal information and recent news, provide a
 risk assessment relevant to the selected category.
 
 Important:
+
 - Do not claim that an organization is definitely legitimate or fraudulent.
 - Treat missing information as unavailable evidence, not proof of fraud.
 - Base the assessment only on the available evidence.
 - Keep the recommendation practical and concise.
 
 Respond ONLY in this format:
-Based on BOTH the legal verification and the recent news, respond ONLY in this format:
 
 Trust Score: <number out of 100>
 Risk: <Low/Medium/High>
@@ -102,9 +113,11 @@ Keep the response concise.
     recommendation = "No recommendation available."
 
     for line in text.split("\n"):
+
         line = line.strip()
 
         if line.startswith("Trust Score:"):
+
             trust_score = (
                 line.replace("Trust Score:", "")
                 .replace("/100", "")
@@ -112,10 +125,15 @@ Keep the response concise.
             )
 
         elif line.startswith("Risk:"):
+
             risk = line.replace("Risk:", "").strip()
 
         elif line.startswith("Recommendation:"):
-            recommendation = line.replace("Recommendation:", "").strip()
+
+            recommendation = line.replace(
+                "Recommendation:",
+                ""
+            ).strip()
 
     return {
         "trust_score": trust_score,
