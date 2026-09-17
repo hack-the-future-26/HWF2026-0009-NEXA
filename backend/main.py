@@ -5,10 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import traceback
 
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-
 from services.news_service import get_company_news
 from services.gemini_service import analyze_company
 from services.gleif_service import get_company_legal_info
@@ -28,6 +24,11 @@ app = FastAPI()
 
 init_db()
 
+
+# --------------------------------------------------
+# Models
+# --------------------------------------------------
+
 class ReviewCreate(BaseModel):
     organization: str = Field(min_length=2, max_length=200)
     experience_type: str = Field(min_length=2, max_length=50)
@@ -35,18 +36,17 @@ class ReviewCreate(BaseModel):
     review_text: str = Field(min_length=10, max_length=2000)
     display_name: str | None = Field(default=None, max_length=80)
 
+
 # --------------------------------------------------
 # CORS
 # --------------------------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,6 +56,7 @@ app.add_middleware(
 # --------------------------------------------------
 # Home
 # --------------------------------------------------
+
 @app.get("/")
 def home():
     return {
@@ -66,6 +67,7 @@ def home():
 # --------------------------------------------------
 # Search Company
 # --------------------------------------------------
+
 @app.get("/search")
 def search(
     company: str = Query(...),
@@ -73,9 +75,11 @@ def search(
 ):
     print(f"\nSearching: {company}")
     print(f"Category: {category}")
-    # -------------------------
+
+    # --------------------------------------------------
     # STEP 1 - News
-    # -------------------------
+    # --------------------------------------------------
+
     try:
         headlines = get_company_news(company)
     except Exception:
@@ -84,19 +88,22 @@ def search(
     news_text = "\n".join(headlines)
 
     print("\n========== NEWS ==========")
+
     if headlines:
         for h in headlines:
             print("-", h)
     else:
         print("No news found.")
 
-    # -------------------------
-    # STEP 2 - Legal
-    # -------------------------
+
+    # --------------------------------------------------
+    # STEP 2 - Legal Information
+    # --------------------------------------------------
+
     try:
         legal_info = get_company_legal_info(company)
 
-    except Exception as e:
+    except Exception:
         print("\n========== GLEIF ERROR ==========")
         traceback.print_exc()
 
@@ -111,11 +118,12 @@ def search(
     print("\n========== LEGAL ==========")
     print(legal_info)
 
-    # -------------------------
-    # STEP 3 - Gemini Analysis
-    # -------------------------
-    try:
 
+    # --------------------------------------------------
+    # STEP 3 - Gemini Analysis
+    # --------------------------------------------------
+
+    try:
         result = analyze_company(
             company,
             news_text,
@@ -123,7 +131,6 @@ def search(
             category
         )
 
-        
         risk = result["risk"]
         recommendation = result["recommendation"]
 
@@ -131,43 +138,46 @@ def search(
         print(result)
 
     except Exception as e:
-
         print("\n========== GEMINI ERROR ==========")
         traceback.print_exc()
 
-        # Fallback values
-        trust_score = "N/A"
         risk = "Unknown"
 
         if "429" in str(e):
             recommendation = (
                 "Gemini API quota has been exceeded. "
-                "Please wait a minute or use another API key."
+                "Please wait or use another API key."
             )
         else:
             recommendation = (
                 "AI analysis is currently unavailable."
             )
-    # -------------------------
+
+
+    # --------------------------------------------------
     # STEP 4 - Community Reviews
-    # -------------------------
+    # --------------------------------------------------
+
     try:
         review_summary = get_review_summary(company)
-    except Exception as e:
+
+    except Exception:
         print("\n========== REVIEW ERROR ==========")
         traceback.print_exc()
 
         review_summary = {
             "review_count": 0,
-            "average_rating": None  
-        }   
+            "average_rating": None
+        }
 
     print("\n========== COMMUNITY REVIEWS ==========")
     print(review_summary)
 
-    # -------------------------
+
+    # --------------------------------------------------
     # STEP 5 - Trust Score
-    # -------------------------
+    # --------------------------------------------------
+
     score_breakdown = calculate_trust_score(
         legal_info=legal_info,
         news=headlines,
@@ -180,9 +190,10 @@ def search(
     print(score_breakdown)
 
 
-    # -------------------------
+    # --------------------------------------------------
     # STEP 6 - Response
-    # -------------------------
+    # --------------------------------------------------
+
     return {
         "company": company,
         "trust_score": trust_score,
@@ -195,9 +206,13 @@ def search(
             "average_rating": review_summary["average_rating"]
         },
         "score_breakdown": score_breakdown
-
     }
-    
+
+
+# --------------------------------------------------
+# Community Reviews - Create
+# --------------------------------------------------
+
 @app.post("/reviews")
 def create_review(review: ReviewCreate):
 
@@ -211,6 +226,10 @@ def create_review(review: ReviewCreate):
 
     return result
 
+
+# --------------------------------------------------
+# Community Reviews - Get
+# --------------------------------------------------
 
 @app.get("/reviews")
 def fetch_reviews(
@@ -237,8 +256,10 @@ async def scan_document(
     file: UploadFile = File(...)
 ):
     try:
+
         allowed_types = {
             "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "image/png",
             "image/jpeg",
             "image/webp",
@@ -247,7 +268,7 @@ async def scan_document(
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file type. Please upload a PDF or image."
+                detail="Unsupported file type. Please upload a PDF, DOCX, or image."
             )
 
         file_bytes = await file.read()
@@ -281,7 +302,7 @@ async def scan_document(
             status_code=500,
             detail="Unable to analyze this document right now."
         )
-    
+
 
 # --------------------------------------------------
 # PDF Verification Report
@@ -289,6 +310,7 @@ async def scan_document(
 
 @app.post("/generate-report")
 def generate_report(data: dict):
+
     try:
         pdf_bytes = generate_verification_report(data)
 
@@ -309,40 +331,3 @@ def generate_report(data: dict):
             status_code=500,
             detail="Unable to generate the verification report."
         )
-
-@app.get("/")
-def home():
-    return {"message": "Welcome to TrustBridge AI Backend 🚀"}
-
-
-@app.get("/search")
-def search(company: str = Query(...)):
-
-    # Step 1: Get latest news
-    headlines = get_company_news(company)
-    news_text = "\n".join(headlines)
-
-    print("\n========== LATEST NEWS ==========")
-    for headline in headlines:
-        print("-", headline)
-
-    # Step 2: Get legal information from GLEIF
-    legal_info = get_company_legal_info(company)
-
-    print("\n========== LEGAL INFORMATION ==========")
-    print(legal_info)
-
-    # Step 3: Analyze using Gemini
-    result = analyze_company(
-        company,
-        news_text,
-        legal_info
-    )
-
-    # Step 4: Return response to frontend
-    return {
-        "company": company,
-        "trust_score": result["trust_score"],
-        "risk": result["risk"],
-        "recommendation": result["recommendation"],
-    }
