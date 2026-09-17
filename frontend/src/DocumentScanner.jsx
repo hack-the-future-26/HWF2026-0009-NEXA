@@ -29,7 +29,7 @@ function DocumentScanner() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/scan-document",
+        "https://trustbridge-backend-x3m5.onrender.com/scan-document",
         {
           method: "POST",
           body: formData,
