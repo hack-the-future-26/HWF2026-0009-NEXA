@@ -22,7 +22,7 @@ function CommunityReviews({ initialOrganization = "" }) {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/reviews?organization=${encodeURIComponent(
+        `https://trustbridge-backend-x3m5.onrender.com/reviews?organization=${encodeURIComponent(
           name.trim()
         )}`
       );
@@ -66,7 +66,7 @@ function CommunityReviews({ initialOrganization = "" }) {
     setMessage("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/reviews", {
+      const response = await fetch("https://trustbridge-backend-x3m5.onrender.com/reviews", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
