@@ -1,7 +1,7 @@
 import { useState } from "react";
 import CommunityReviews from "./CommunityReviews";
 import DocumentScanner from "./DocumentScanner";
-import "./app.css";
+import "./App.css";
 
 function App() {
   const [companyData, setCompanyData] = useState(null);
